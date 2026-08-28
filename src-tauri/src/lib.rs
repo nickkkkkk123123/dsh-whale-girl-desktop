@@ -88,21 +88,33 @@ fn get_screen_size(app: tauri::AppHandle) -> serde_json::Value {
 }
 
 /// 返回系统资源：CPU 使用率(%)、总/可用内存(GB)。
+static CPU_SYS: std::sync::Mutex<Option<sysinfo::System>> = std::sync::Mutex::new(None);
+
 #[tauri::command]
 fn get_system_stats() -> serde_json::Value {
     use sysinfo::System;
-    let mut sys = System::new();
+    let mut guard = CPU_SYS.lock().unwrap();
+    if guard.is_none() {
+        let mut s = System::new();
+        s.refresh_cpu_usage();
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        s.refresh_cpu_usage();
+        *guard = Some(s);
+    }
+    let sys = guard.as_mut().unwrap();
     sys.refresh_cpu_usage();
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    std::thread::sleep(std::time::Duration::from_millis(500));
     sys.refresh_cpu_usage();
-    let cpu = sys.global_cpu_usage();
-
+    // 按逻辑核心求平均，与任务管理器一致（每核 cpu_usage() 返回 0~100）
+    let cpus = sys.cpus();
+    let n = cpus.len().max(1) as f64;
+    let sum: f64 = cpus.iter().map(|c| c.cpu_usage() as f64).sum();
+    let cpu_pct = (sum / n).round() as u32;
     sys.refresh_memory();
     let total_mem = sys.total_memory() as f64 / 1024.0 / 1024.0;
     let used_mem = sys.used_memory() as f64 / 1024.0 / 1024.0;
-
     serde_json::json!({
-        "cpu": (cpu * 100.0).round() as u32,
+        "cpu": cpu_pct.min(100),
         "memTotal": (total_mem * 10.0).round() / 10.0,
         "memUsed": (used_mem * 10.0).round() / 10.0,
         "memPct": if total_mem > 0.0 { (used_mem / total_mem * 100.0).round() as u32 } else { 0 },
