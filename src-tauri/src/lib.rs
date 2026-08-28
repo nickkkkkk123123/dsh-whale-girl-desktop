@@ -97,13 +97,12 @@ fn get_system_stats() -> serde_json::Value {
     if guard.is_none() {
         let mut s = System::new();
         s.refresh_cpu_usage();
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(200));
         s.refresh_cpu_usage();
         *guard = Some(s);
     }
     let sys = guard.as_mut().unwrap();
-    sys.refresh_cpu_usage();
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    // 每次调用只需 refresh 一次：CPU 占用率基于上一次调用建立的基准（间隔足够）
     sys.refresh_cpu_usage();
     // 按逻辑核心求平均，与任务管理器一致（每核 cpu_usage() 返回 0~100）
     let cpus = sys.cpus();

@@ -36,7 +36,7 @@ export function InfoPanel({ below }: Props) {
       if (alive && s) setStats(s)
     }
     void poll()
-    const t = window.setInterval(poll, 2000)
+    const t = window.setInterval(poll, 5000)
     return () => {
       alive = false
       window.clearInterval(t)
