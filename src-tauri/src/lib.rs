@@ -70,8 +70,9 @@ fn get_screen_size(app: tauri::AppHandle) -> serde_json::Value {
     let mut best_area: u64 = 0;
     if let Ok(monitors) = app.available_monitors() {
         for m in monitors {
-            let wa = m.size();
-            let s = wa.to_logical::<f64>(m.scale_factor());
+            // 用工作区尺寸（跳过任务栏），与 setup_window 初始定位一致
+            let wa = m.work_area();
+            let s = wa.size.to_logical::<f64>(m.scale_factor());
             let w = s.width as u32;
             let h = s.height as u32;
             let area = (w as u64) * (h as u64);
@@ -82,8 +83,6 @@ fn get_screen_size(app: tauri::AppHandle) -> serde_json::Value {
         }
     }
     let (w, h) = best.unwrap_or((1920, 1080));
-    let msg = format!("[get_screen_size] returning w={} h={}\n", w, h);
-    let _ = std::fs::write("C:\\Users\\NICK\\.whale-girl-desktop.log", msg);
     serde_json::json!({ "w": w, "h": h })
 }
 

@@ -27,7 +27,7 @@ export function InfoPanel({ below }: Props) {
     return () => window.clearInterval(t)
   }, [])
 
-  // 系统资源：每 2 秒刷新
+  // 系统资源：每 5 秒刷新（CPU 采样需间隔时间才能得到有意义的增量）
   useEffect(() => {
     if (!isTauri()) return
     let alive = true

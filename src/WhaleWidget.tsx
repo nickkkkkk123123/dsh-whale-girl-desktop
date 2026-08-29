@@ -23,6 +23,15 @@ const FLING_SPEED = 800
 /** 边缘吸附时距屏幕边缘的留白（px）。 */
 const EDGE_GAP = 8
 
+/** 默认位置：窗口整体贴屏幕右下角。窗口(320x560)比角色区大，必须按窗口尺寸计算，
+ *  否则窗口底部（含信息面板）会伸出屏幕下缘被裁切。返回角色左上角屏幕坐标。 */
+function defaultRolePos(w: number, h: number) {
+  return {
+    x: Math.max(0, w - WIN_W - EDGE_GAP) + ROLE_OFFSET_X,
+    y: Math.max(0, h - WIN_H - EDGE_GAP) + ROLE_OFFSET_Y
+  }
+}
+
 export interface DeskConfig {
   soundMode: SoundMode
   showBubble: boolean
@@ -80,7 +89,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
     () => ({
       resetPosition: () => {
         const { w, h } = screen
-        const p = { x: Math.max(0, w - WIDGET_W - EDGE_GAP), y: Math.max(0, h - WIDGET_H - EDGE_GAP) }
+        const p = defaultRolePos(w, h)
         posRef.current = p
         setPos(p)
         setRoleOffX(ROLE_OFFSET_X)
@@ -111,7 +120,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
       }
       if (!alive) return
       setScreen({ w, h })
-      const p = { x: Math.max(0, w - WIDGET_W - EDGE_GAP), y: Math.max(0, h - WIDGET_H - EDGE_GAP) }
+      const p = defaultRolePos(w, h)
       posRef.current = p
       setPos(p)
       setReady(true)
