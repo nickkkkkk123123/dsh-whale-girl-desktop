@@ -32,6 +32,13 @@ function defaultRolePos(w: number, h: number) {
   }
 }
 
+/** 空闲彩蛋台词阈值范围（2~5 分钟无交互自动说一句），与插件版空闲台词行为对齐。 */
+const IDLE_MIN_MS = 120000
+const IDLE_MAX_MS = 300000
+function randomIdleDelay() {
+  return IDLE_MIN_MS + Math.random() * (IDLE_MAX_MS - IDLE_MIN_MS)
+}
+
 export interface DeskConfig {
   soundMode: SoundMode
   showBubble: boolean
@@ -76,6 +83,8 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
   // 角色在窗口内的水平偏移（吸附左/右时贴边，否则居中）
   const [roleOffX, setRoleOffX] = useState(ROLE_OFFSET_X)
   const roleOffXRef = useRef(ROLE_OFFSET_X)
+  const lastActivityRef = useRef(Date.now())
+  const idleDelayRef = useRef(randomIdleDelay())
   if (soundRef.current === null) soundRef.current = new SoundEngine()
 
   // 应用音效模式
@@ -145,6 +154,27 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
       flingRef.current?.cancel()
     }
   }, [])
+
+  /** 用户交互时刷新空闲计时。 */
+  const pokeActivity = useCallback(() => {
+    lastActivityRef.current = Date.now()
+  }, [])
+
+  // 空闲彩蛋台词：2~5 分钟无交互自动说一句（说完 5 秒气泡自行消失，再重新计时）
+  useEffect(() => {
+    if (!config.showBubble) return
+    const check = () => {
+      if (bubble !== null) return
+      if (Date.now() - lastActivityRef.current >= idleDelayRef.current) {
+        setBubble(pickRandomIdleLine())
+        setBubbleKey((k) => k + 1)
+        lastActivityRef.current = Date.now()
+        idleDelayRef.current = randomIdleDelay()
+      }
+    }
+    const t = window.setInterval(check, 5000)
+    return () => window.clearInterval(t)
+  }, [config.showBubble, bubble])
 
   const stopFling = useCallback(() => {
     if (flingRef.current) {
@@ -242,6 +272,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
+      pokeActivity()
       const el = rootRef.current
       if (!el) return
       stopFling()
@@ -267,6 +298,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
+      pokeActivity()
       if (!dragRef.current) return
       trackerRef.current.push(e.screenX, e.screenY)
       const { w, h } = screen
@@ -284,6 +316,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent) => {
+      pokeActivity()
       const start = pressStartRef.current
       const moved = start !== null && Math.hypot(e.screenX - start.x, e.screenY - start.y) > 6
       const vel = trackerRef.current.velocity()
@@ -357,6 +390,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
   // 右键菜单：由外层 App 处理
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
+      pokeActivity()
       e.preventDefault()
       onContextMenu?.(e)
     },
