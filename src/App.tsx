@@ -17,7 +17,7 @@ interface MenuState {
 }
 
 const CONFIG_KEY = 'whale-girl-desktop-config'
-const DEFAULT_CONFIG: DeskConfig = { soundMode: 'cute', showBubble: true, showInfo: true }
+const DEFAULT_CONFIG: DeskConfig = { soundMode: 'cute', showBubble: true, showInfo: true, eco: true }
 
 function loadConfig(): DeskConfig {
   try {
@@ -27,7 +27,8 @@ function loadConfig(): DeskConfig {
     return {
       soundMode: o.soundMode === 'duck' ? 'duck' : 'cute',
       showBubble: o.showBubble !== false,
-      showInfo: o.showInfo !== false
+      showInfo: o.showInfo !== false,
+      eco: o.eco !== false
     }
   } catch {
     return DEFAULT_CONFIG
@@ -107,6 +108,11 @@ export default function App() {
     setMenu(null)
   }, [config, persistConfig])
 
+  const onToggleEco = useCallback(() => {
+    persistConfig({ ...config, eco: !config.eco })
+    setMenu(null)
+  }, [config, persistConfig])
+
   const onResetPosition = useCallback(() => {
     widgetRef.current?.resetPosition()
     setMenu(null)
@@ -150,6 +156,9 @@ export default function App() {
           </div>
           <div className="wg-menu-item" onClick={onToggleInfo}>
             <span className={`wg-menu-check${config.showInfo ? ' on' : ''}`} /> 信息面板(时间/资源)
+          </div>
+          <div className="wg-menu-item" onClick={onToggleEco}>
+            <span className={`wg-menu-check${config.eco ? ' on' : ''}`} /> 省电模式
           </div>
           <div className="wg-menu-divider" />
           <div className="wg-menu-item" onClick={onResetPosition}>↺ 恢复默认位置</div>

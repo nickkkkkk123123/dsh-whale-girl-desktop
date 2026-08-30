@@ -39,10 +39,14 @@ function randomIdleDelay() {
   return IDLE_MIN_MS + Math.random() * (IDLE_MAX_MS - IDLE_MIN_MS)
 }
 
+/** 省电模式：空闲 60 秒暂停角色漂浮动画，交互立即恢复。 */
+const ECO_IDLE_MS = 60000
+
 export interface DeskConfig {
   soundMode: SoundMode
   showBubble: boolean
   showInfo: boolean
+  eco: boolean
 }
 
 interface Props {
@@ -85,6 +89,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
   const roleOffXRef = useRef(ROLE_OFFSET_X)
   const lastActivityRef = useRef(Date.now())
   const idleDelayRef = useRef(randomIdleDelay())
+  const [eco, setEco] = useState(false)
   if (soundRef.current === null) soundRef.current = new SoundEngine()
 
   // 应用音效模式
@@ -155,10 +160,24 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
     }
   }, [])
 
-  /** 用户交互时刷新空闲计时。 */
+  /** 用户交互时刷新空闲计时并恢复角色动画。 */
   const pokeActivity = useCallback(() => {
     lastActivityRef.current = Date.now()
+    setEco(false)
   }, [])
+
+  // 省电模式：开启时空闲 60 秒暂停角色漂浮动画（交互立即恢复；关闭则始终播放）
+  useEffect(() => {
+    if (!config.eco) {
+      setEco(false)
+      return
+    }
+    const check = () => {
+      if (Date.now() - lastActivityRef.current >= ECO_IDLE_MS) setEco(true)
+    }
+    const t = window.setInterval(check, 5000)
+    return () => window.clearInterval(t)
+  }, [config.eco])
 
   // 空闲彩蛋台词：2~5 分钟无交互自动说一句（说完 5 秒气泡自行消失，再重新计时）
   useEffect(() => {
@@ -417,7 +436,7 @@ export const WhaleWidget = forwardRef<WhaleWidgetHandle, Props>(
       >
         <div
           ref={rootRef}
-          className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${flip ? ' wg-flip' : ''}`}
+          className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${flip ? ' wg-flip' : ''}${eco ? ' wg-eco' : ''}`}
           style={{
             left: roleOffX,
             top: ROLE_OFFSET_Y,
